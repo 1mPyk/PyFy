@@ -1,0 +1,20 @@
+2026-01-25 15:43:39,342 ERROR PyFy: [Discord RPC] Error: Could not find Discord installed and running on this machine.
+Traceback (most recent call last):
+  File "D:\ServerOrScripts\Python\Player\app\PyFy\pyfy_source\pyfy.py", line 1195, in __init__
+    self.rpc.connect()
+    ~~~~~~~~~~~~~~~~^^
+  File "C:\Users\stefa\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\pypresence\presence.py", line 91, in connect
+    self.loop.run_until_complete(self.handshake())
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "C:\Users\stefa\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\pypresence\baseclient.py", line 147, in handshake
+    raise DiscordNotFound
+pypresence.exceptions.DiscordNotFound: Could not find Discord installed and running on this machine.
+2026-01-25 15:43:41,487 ERROR PyFy: [Ошибка] check_for_updates: name 'get_latest_version' is not defined
+Traceback (most recent call last):
+  File "D:\ServerOrScripts\Python\Player\app\PyFy\pyfy_source\pyfy.py", line 3183, in check_for_updates
+    latest = get_latest_version()
+             ^^^^^^^^^^^^^^^^^^
+NameError: name 'get_latest_version' is not defined

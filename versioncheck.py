@@ -1,5 +1,6 @@
 import logging
 import urllib.request
+from pyfycfg import VERSION_URL
 
 logger = logging.getLogger("PyFy")
 logger.addHandler(logging.NullHandler())
