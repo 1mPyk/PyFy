@@ -1,6 +1,6 @@
 import urllib.request
 import os
-from versioncheck import logger
+from utils.logger import logger
 
 def ensure_dir(path: str):
     try:

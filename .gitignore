@@ -1,0 +1,23 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local folders
+local/
+.env
+
+# VS Code
+.vscode/
+
+# OS junk
+Thumbs.db
+.DS_Store
+
+# Logs
+*.log
+
+# Virtual env
+venv/
+.venv/

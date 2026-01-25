@@ -9,7 +9,6 @@ import threading
 import time
 import subprocess
 import shutil
-import urllib.request
 from PyQt5.QtCore import (
     Qt,
     QUrl,
@@ -46,9 +45,9 @@ from PyQt5.QtWidgets import (
     QProgressBar,
 )
 import logging
-from pyfy_utils import sanitize_filename
+from utils.sanitize import sanitize_filename
 from languages import I18N
-from pyfycfg import (
+from config.constants import (
     VERSION,
     LAV_FILTERS_URL,
     LAV_FILTERS_DIRECT,
@@ -65,9 +64,13 @@ from pyfycfg import (
     SETTINGS_FILE,
     downloading_path
 )
-from downloader import (
+from core.downloader import (
     download_file,
     ensure_dir
+)
+from utils.versions import(
+    compare_versions,
+    get_latest_version
 )
 
 logger = logging.getLogger("PyFy")

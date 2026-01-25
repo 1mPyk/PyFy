@@ -1,9 +1,6 @@
-import logging
 import urllib.request
-from pyfycfg import VERSION_URL
-
-logger = logging.getLogger("PyFy")
-logger.addHandler(logging.NullHandler())
+from config.constants import VERSION_URL
+from utils.logger import logger
 
 def compare_versions(v1: str, v2: str) -> int:
     """Compare two semantic version strings.
