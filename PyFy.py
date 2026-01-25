@@ -14,11 +14,9 @@ from PyQt5.QtCore import (
     Qt,
     QUrl,
     QTime,
-    QPoint,
     QObject,
     QEvent,
     QSize,
-    QRectF,
     QTimer,
     QThread,
     pyqtSignal,
@@ -44,233 +42,40 @@ from PyQt5.QtWidgets import (
     QLineEdit,
     QCheckBox,
     QMessageBox,
-    QComboBox,
     QDialog,
     QProgressBar,
 )
 import logging
 from pyfy_utils import sanitize_filename
+from languages import I18N
+from pyfycfg import (
+    VERSION,
+    LAV_FILTERS_URL,
+    LAV_FILTERS_DIRECT,
+    ICONS_PACK_ZIP,
+    SONGS_DIR,
+    CONFIG_DIR,
+    ICON,
+    LAST_PLAYLIST_FILE,
+    LIKED_FILE,
+    HISTORY_FILE,
+    VOLUME_FILE,
+    PLAYLISTS_FILE,
+    ICONS_DIR,
+    SETTINGS_FILE,
+    downloading_path
+)
 
-# lightweight logger; detailed handlers (file) will be added after config dir is available
 logger = logging.getLogger("PyFy")
 logger.addHandler(logging.NullHandler())
-VERSION = "1.3.11"
-VERSION_URL = "https://raw.githubusercontent.com/PykHubOfficial/Testmain/refs/heads/main/versionPyFy.txt"
-I18N = {
-    "en": {
-        "settings_title": "Settings",
-        "tab_interface": "Interface",
-        "tab_other": "Other",
-        "interface_title": "Interface Settings",
-        "show_covers": "Show album covers",
-        "language": "Language",
-        "lang_en": "English",
-        "lang_uk": "Ukrainian",
-        "lang_ru": "Russian",
-        "other_title": "Other",
-        "rpc_checkbox_en": "Show as Discord status",
-        "drv_text": 'Music not playing? <a href="{url}">Download Driver</a>',
-        "icons_text": "Missing some icons? <a href='#'>Download all</a>",
-        "downloading": "Downloading...",
-        "download_done": "Download finished",
-        "download_fail": "Download failed",
-        "enter_big_picture": "Enter Big Picture Mode (Bugs - Unready)",
-        "app_title": "PyFy Music Player",
-        "url_placeholder": "Enter YouTube URL...",
-        "update_ready_tooltip": "Update is ready!",
-        "playlists": "Playlists",
-        "liked_btn": "❤️ Liked",
-        "empty_placeholder": 'Find songs via "+ Add Songs" or put tracks into local/data/Songs',
-        "add_songs": "+ Add Songs",
-        "add_folder": "+ Add Folder",
-        "create_playlist": "Create Playlist",
-        "rescan": "Rescan Songs",
-        "restart": "Restart",
-        "open_songs_dir": "Open Songs Dir",
-        "menu_create_playlist": "Create playlist",
-        "menu_rename": "✏ Rename",
-        "menu_delete": "🗑 Delete",
-        "dlg_rename_title": "Rename playlist",
-        "dlg_rename_prompt": "New name:",
-        "dlg_new_playlist_title": "Create playlist",
-        "dlg_new_playlist_prompt": "Playlist name:",
-        "filedlg_select_songs": "Select Songs",
-        "filedlg_select_folder": "Select folder",
-        "filedlg_audio_filter": "Audio Files (*.mp3 *.wav *.flac *.m4a *.aac *.mp4 *.webm)",
-        "msg_downloading_title": "Downloading",
-        "msg_downloading_text": "Downloading Audio...",
-        "msg_error_title": "Error",
-        "msg_error_download_text": "Failed to download audio",
-        "msg_error_download_hint": """Make sure the URL is correct and you have an internet connection.
-Try this url format:
-https://www.youtube.com/watch?v=1234567890
-If the problem persists, please report it on Discord im.pyk""",
-    },
-    "uk": {
-        "settings_title": "Налаштування",
-        "tab_interface": "Інтерфейс",
-        "tab_other": "Інше",
-        "interface_title": "Налаштування інтерфейсу",
-        "show_covers": "Показувати обкладинки альбомів",
-        "language": "Мова",
-        "lang_en": "Англійська",
-        "lang_uk": "Українська",
-        "lang_ru": "Російська",
-        "other_title": "Інше",
-        "rpc_checkbox_en": "Show as Discord status",
-        "drv_text": 'Не відтворюється музика? <a href="{url}">Завантажити драйвер</a>',
-        "icons_text": "Немає деяких значків? <a href='#'>Завантажити все</a>",
-        "downloading": "Завантаження...",
-        "download_done": "Завантаження завершено",
-        "download_fail": "Помилка завантаження",
-        "enter_big_picture": "Увійти в режим Big Picture (Bugs - Unready)",
-        "app_title": "PyFy Музичний плеєр",
-        "url_placeholder": "Введіть посилання YouTube...",
-        "update_ready_tooltip": "Доступне оновлення!",
-        "playlists": "Плейлисти",
-        "liked_btn": "❤️ Вибране",
-        "empty_placeholder": 'Знайдіть пісні через "+ Додати пісні" або покладіть треки в local/data/Songs',
-        "add_songs": "+ Додати пісні",
-        "add_folder": "+ Додати теку",
-        "create_playlist": "Створити плейлист",
-        "rescan": "Пересканувати пісні",
-        "restart": "Перезапустити",
-        "open_songs_dir": "Відкрити теку пісень",
-        "menu_create_playlist": "Створити плейлист",
-        "menu_rename": "✏ Перейменувати",
-        "menu_delete": "🗑 Видалити",
-        "dlg_rename_title": "Перейменування плейлиста",
-        "dlg_rename_prompt": "Нова назва:",
-        "dlg_new_playlist_title": "Створення плейлиста",
-        "dlg_new_playlist_prompt": "Назва плейлиста:",
-        "filedlg_select_songs": "Вибір пісень",
-        "filedlg_select_folder": "Вибір теки",
-        "filedlg_audio_filter": "Аудіо файли (*.mp3 *.wav *.flac *.m4a *.aac *.mp4 *.webm)",
-        "msg_downloading_title": "Завантаження",
-        "msg_downloading_text": "Завантаження аудіо...",
-        "msg_error_title": "Помилка",
-        "msg_error_download_text": "Не вдалося завантажити аудіо",
-        "msg_error_download_hint": """Переконайтеся, що посилання правильне і є інтернет-з'єднання.
-Приклад посилання:
-https://www.youtube.com/watch?v=1234567890
-Якщо проблема не зникає, напишіть у Discord im.pyk""",
-    },
-    "ru": {
-        "settings_title": "Настройки",
-        "tab_interface": "Интерфейс",
-        "tab_other": "Другое",
-        "interface_title": "Настройки интерфейса",
-        "show_covers": "Показывать обложки альбомов",
-        "language": "Язык",
-        "lang_en": "Английский",
-        "lang_uk": "Украинский",
-        "lang_ru": "Русский",
-        "other_title": "Другое",
-        "rpc_checkbox_en": "Show as Discord status",
-        "drv_text": 'Не воспроизводится музыка? <a href="{url}">Скачать драйвер</a>',
-        "icons_text": "Нет некоторых значков? <a href='#'>Скачать всё</a>",
-        "downloading": "Загрузка...",
-        "download_done": "Загрузка завершена",
-        "download_fail": "Ошибка загрузки",
-        "enter_big_picture": "Войти в режим Big Picture (Bugs - Unready)",
-        "app_title": "PyFy Музыкальный плеер",
-        "url_placeholder": "Введите ссылку YouTube...",
-        "update_ready_tooltip": "Доступно обновление!",
-        "playlists": "Плейлисты",
-        "liked_btn": "❤️ Избранное",
-        "empty_placeholder": 'Найдите песни через "+ Добавить песни" или положите треки в local/data/Songs',
-        "add_songs": "+ Добавить песни",
-        "add_folder": "+ Добавить папку",
-        "create_playlist": "Создать плейлист",
-        "rescan": "Пересканировать песни",
-        "restart": "Перезапустить",
-        "open_songs_dir": "Открыть папку с песнями",
-        "menu_create_playlist": "Создать плейлист",
-        "menu_rename": "✏ Переименовать",
-        "menu_delete": "🗑 Удалить",
-        "dlg_rename_title": "Переименование плейлиста",
-        "dlg_rename_prompt": "Новое имя:",
-        "dlg_new_playlist_title": "Создание плейлиста",
-        "dlg_new_playlist_prompt": "Название плейлиста:",
-        "filedlg_select_songs": "Выбор песен",
-        "filedlg_select_folder": "Выбор папки",
-        "filedlg_audio_filter": "Аудио файлы (*.mp3 *.wav *.flac *.m4a *.aac *.mp4 *.webm)",
-        "msg_downloading_title": "Загрузка",
-        "msg_downloading_text": "Загрузка аудио...",
-        "msg_error_title": "Ошибка",
-        "msg_error_download_text": "Не удалось загрузить аудио",
-        "msg_error_download_hint": """Убедитесь, что ссылка правильная и есть интернет.
-Пример ссылки:
-https://www.youtube.com/watch?v=1234567890
-        Если проблема не исчезает, сообщите в Discord im.pyk""",
-    },
-}
-# ---------------------------
-# Version check helpers
 
-
-def compare_versions(v1: str, v2: str) -> int:
-    """Compare two semantic version strings.
-
-    Returns:
-        -1 if v1 < v2
-         0 if equal
-         1 if v1 > v2
-    """
-    try:
-        a = [int(x) for x in str(v1).split(".")]
-        b = [int(x) for x in str(v2).split(".")]
-        length = max(len(a), len(b))
-        a += [0] * (length - len(a))
-        b += [0] * (length - len(b))
-        for x, y in zip(a, b):
-            if x < y:
-                return -1
-            if x > y:
-                return 1
-        return 0
-    except Exception:
-        return 0
-
-
-def get_latest_version():
-    """Получает последнюю версию с сервера."""
-    try:
-        with urllib.request.urlopen(VERSION_URL, timeout=6) as resp:
-            return resp.read().decode("utf-8").strip().splitlines()[0].strip()
-    except Exception as e:
-        logger.exception(f"[Ошибка] Не удалось получить последнюю версию: {e}")
-        return None
-
-
-# ---------------------------
-# Config paths
-# ---------------------------
 def get_current_path():
-    if getattr(sys, "frozen", False):  # если запущено как .exe (PyInstaller и т.п.)
+    if getattr(sys, "frozen", False):
         return os.path.dirname(sys.executable)
     else:  # если обычный .py
         return os.path.dirname(os.path.abspath(__file__))
 
-
-LAV_FILTERS_URL = "https://github.com/Nevcairiel/LAVFilters/releases/"
-LAV_FILTERS_DIRECT = ""
-ICONS_PACK_ZIP = (
-    "https://github.com/PykHubOfficial/Testmain/raw/refs/heads/main/icons_pack.zip"
-)
-CONFIG_DIR1 = os.path.join("local", "cfg")
-SONGS_DIR1 = os.path.join("local", "data", "Songs")
-SONGS_DIR = os.path.join(get_current_path(), SONGS_DIR1)
-CONFIG_DIR = os.path.join(get_current_path(), CONFIG_DIR1)
-ICON1 = os.path.dirname(get_current_path())
-ICON = os.path.join(ICON1, "app.ico")
-LAST_PLAYLIST_FILE = os.path.join(CONFIG_DIR, "last_playlist.json")
 logger.debug("SONGS_DIR=%s CONFIG_DIR=%s", SONGS_DIR, CONFIG_DIR)
-
-
-# ---------------------------
-# Helpers (filesystem & downloads)
-# ---------------------------
 def ensure_dir(path: str):
     try:
         if os.path.exists(path) and os.path.isfile(path):
@@ -294,18 +99,10 @@ def download_file(url: str, dst_path: str) -> bool:
         return False
 
 
-LIKED_FILE = os.path.join(CONFIG_DIR, "liked.json")
-HISTORY_FILE = os.path.join(CONFIG_DIR, "history.json")
-VOLUME_FILE = os.path.join(CONFIG_DIR, "volume.json")
-PLAYLISTS_FILE = os.path.join(CONFIG_DIR, "playlists.json")
-ICONS_DIR1 = os.path.join("local", "data", "imgs")
-ICONS_DIR = os.path.join(get_current_path(), ICONS_DIR1)
-SETTINGS_FILE = os.path.join(CONFIG_DIR, "settings.json")
-downloadimg_path = os.path.join(os.path.dirname(get_current_path()), "download.png")
-logger.debug("downloadimg_path: %s", downloadimg_path)
+logger.debug("downloadimg_path: %s", downloading_path)
 ensure_dir(ICONS_DIR)
-if os.path.exists(downloadimg_path):
-    shutil.move(downloadimg_path, ICONS_DIR)
+if os.path.exists(downloading_path):
+    shutil.move(downloading_path, ICONS_DIR)
 downloadupdate_path = os.path.join(
     os.path.dirname(get_current_path()), "downloadupdate.png"
 )
