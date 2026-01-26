@@ -1,6 +1,6 @@
-from PyQt5.QtCore import Qt, QUrl, QTime, QTimer
-from PyQt5.QtGui import QIcon, QPixmap, QPainterPath, QPainter
-from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+from PyQt5.QtCore import Qt, QTime, QTimer
+from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtMultimedia import QMediaPlayer
 from PyQt5.QtWidgets import (
     QApplication,
     QWidget,
@@ -24,7 +24,6 @@ import os
 import time
 import threading
 import json
-from ui.dialogs import DownloadHistoryDialog, DownloadProgressDialog, DownloadWorker
 from ui.settings import SettingsWindow
 from languages import I18N
 from utils.logger import logger
@@ -39,12 +38,32 @@ from config.constants import (
     SONGS_DIR,
     COVERS_DIR,
     VERSION,
-    get_current_path
+    get_current_path,
 )
 from ui.widgets import AnimatedButton, SongItemWidget
 from ui.topbar import ModernTopBar
 from utils.versions import get_latest_version, compare_versions
+
+
 class MusicPlayerUI(QWidget):
+    from core.player import (
+        _toggle_play,
+        _play_next,
+        _update_rpc_time,
+        _get_progress_bar,
+        _toggle_repeat,
+        _play_prev,
+        play_song,
+        _connect_and_play_path,
+    )
+    from core.downloader import (
+        download_from_youtube,
+        _on_download_finished,
+        _on_download_error,
+        _force_close_download_msg,
+        show_download_history
+    )
+
     def _t(self, key: str) -> str:
         lang = getattr(self, "language", "en")
         return I18N.get(lang, I18N["en"]).get(key, key)
@@ -347,171 +366,6 @@ class MusicPlayerUI(QWidget):
 
     def save_volume(self, v):
         self._save_json(VOLUME_FILE, int(v))
-
-    def download_from_youtube(self):
-        url = self.topbar.url_input.text().strip()
-        if not url:
-            return
-
-        if hasattr(self, "download_thread") and self.download_thread.isRunning():
-            return
-
-        # record last url for retry purposes
-        self.last_download_url = url
-
-        # record initial history entry
-        try:
-            self.download_history.append(
-                {"url": url, "title": None, "status": "started", "message": None}
-            )
-        except Exception:
-            pass
-
-        # show a non-modal progress dialog with cancel
-        self.download_progress = DownloadProgressDialog(
-            self,
-            title=self._t("msg_downloading_title"),
-            label=self._t("msg_downloading_text"),
-        )
-
-        self.download_thread = DownloadWorker(url)
-        # connect progress/status signals
-        self.download_thread.progress.connect(
-            lambda v: self.download_progress.set_progress(v)
-        )
-        self.download_thread.status.connect(
-            lambda s: self.download_progress.set_status(s)
-        )
-        # wire cancel button to request cancellation
-        self.download_progress.cancel_btn.clicked.connect(self.download_thread.cancel)
-
-        self.download_thread.success.connect(self._on_download_finished)
-        self.download_thread.error.connect(self._on_download_error)
-
-        # close dialog when finished or error
-        self.download_thread.finished.connect(lambda: (self.download_progress.close()))
-
-        self.download_progress.show()
-        self.download_thread.start()
-
-    def _on_download_finished(self, file_path, title, timeline, cover):
-        self._force_close_download_msg()  # 🔴 ВАЖЛИВО
-
-        # update history
-        try:
-            self.download_history.append(
-                {
-                    "url": getattr(self, "last_download_url", None),
-                    "title": title,
-                    "status": "success",
-                    "message": None,
-                }
-            )
-        except Exception:
-            pass
-
-        self.topbar.url_input.clear()
-        self._scan_songs_dir()
-
-        # update history dialog if open
-        try:
-            if (
-                hasattr(self, "download_history_dialog")
-                and self.download_history_dialog
-            ):
-                self.download_history_dialog.reload()
-        except Exception:
-            pass
-
-        QMessageBox.information(
-            self, self._t("download_done"), self._t("download_done")
-        )
-
-    def _on_download_error(self, error_text):
-        self._force_close_download_msg()  # 🔴 ВАЖЛИВО
-
-        # record history
-        try:
-            self.download_history.append(
-                {
-                    "url": getattr(self, "last_download_url", None),
-                    "title": None,
-                    "status": (
-                        "error"
-                        if error_text and "cancel" not in (error_text or "").lower()
-                        else "cancelled"
-                    ),
-                    "message": str(error_text),
-                }
-            )
-            if (
-                hasattr(self, "download_history_dialog")
-                and self.download_history_dialog
-            ):
-                self.download_history_dialog.reload()
-        except Exception:
-            pass
-
-        if error_text and "cancel" in (error_text or "").lower():
-            QMessageBox.information(
-                self, self._t("msg_downloading_title"), "Download cancelled"
-            )
-            return
-
-        # present a retry dialog
-        try:
-            res = QMessageBox.question(
-                self,
-                self._t("msg_error_title"),
-                self._t("msg_error_download_hint") + "\n\nRetry?",
-                QMessageBox.Retry | QMessageBox.Cancel,
-            )
-            if res == QMessageBox.Retry:
-                # attempt retry using the last recorded URL
-                if getattr(self, "last_download_url", None):
-                    self.topbar.url_input.setText(self.last_download_url)
-                    QTimer.singleShot(250, lambda: self.download_from_youtube())
-                return
-        except Exception:
-            logger.exception("Error showing retry dialog")
-
-        QMessageBox.critical(
-            self, self._t("msg_error_title"), self._t("msg_error_download_hint")
-        )
-
-    def _force_close_download_msg(self):
-        logger.debug("HIDE DOWNLOAD MSG")
-        if hasattr(self, "download_msg") and self.download_msg:
-            try:
-                self.download_msg.hide()
-                self.download_msg.deleteLater()
-            except Exception:
-                pass
-        if hasattr(self, "download_progress") and self.download_progress:
-            try:
-                self.download_progress.close()
-                self.download_progress.deleteLater()
-            except Exception:
-                pass
-
-    def show_download_history(self):
-        try:
-            if (
-                not hasattr(self, "download_history_dialog")
-                or not self.download_history_dialog
-            ):
-                self.download_history_dialog = DownloadHistoryDialog(
-                    self, self.download_history
-                )
-            else:
-                self.download_history_dialog.reload()
-            self.download_history_dialog.show()
-            self.download_history_dialog.raise_()
-            self.download_history_dialog.activateWindow()
-        except Exception as e:
-            logger.exception("Error showing download history: %s", e)
-            QMessageBox.critical(self, self._t("msg_error_title"), str(e))
-            self.download_msg = None
 
     # ---------------------------
     # UI build
@@ -1098,192 +952,6 @@ class MusicPlayerUI(QWidget):
 
     def open_songs_dir(self):
         os.startfile(SONGS_DIR)
-
-    # ---------------------------
-    # Playback logic
-    # ---------------------------
-    def _connect_and_play_path(self, path):
-        # low-level: point player to file and play
-        url = QUrl.fromLocalFile(os.path.normpath(path))
-        self.player.setMedia(QMediaContent(url))
-        self.player.play()
-        self.play_btn.setText("⏸")
-
-    def play_song(self, index):
-        """Play by index in current_playlist (and snapshot playback playlist)"""
-        if not (0 <= index < len(self.current_playlist)):
-            return
-        # snapshot playback playlist when playback starts
-        self.playback_playlist = list(self.current_playlist)
-        self.playback_playlist_name = self.current_playlist_name
-        self.current_index = index
-        p = self.playback_playlist[index]
-        self._connect_and_play_path(p)
-        # --- Discord Rich Presence update ---
-        try:
-            if self.rpc:
-                song_title = os.path.splitext(os.path.basename(p))[0]
-                start_time = int(time.time())
-                self.rpc.update(
-                    details=f"🎵 {song_title}",
-                    state="Listening in PyFy",
-                    start=start_time,
-                    large_text="PyFy Music Player",
-                )
-
-                # Запускаем поток обновления времени
-                self.rpc_running = True
-                if self.rpc_thread and self.rpc_thread.is_alive():
-                    self.rpc_running = False
-                    time.sleep(0.2)
-                self.rpc_thread = threading.Thread(
-                    target=self._update_rpc_time, args=(song_title,)
-                )
-                self.rpc_thread.daemon = True
-                self.rpc_thread.start()
-        except Exception as e:
-            logger.exception("[Discord RPC Update Error] %s", e)
-        # save history
-        if p not in self.listening_history:
-            self.listening_history.append(p)
-            self.save_history()
-
-        # refresh hearts
-        self.refresh_current_view()
-
-        # --- Обновляем большую обложку ---
-        song_path = self.current_playlist[self.current_index]
-        cover_name = os.path.splitext(os.path.basename(song_path))[0] + ".webp"
-        cover_path = os.path.join(COVERS_DIR, cover_name)
-
-        if self.show_covers_enabled and os.path.exists(cover_path):
-            pixmap = QPixmap(cover_path)
-            if pixmap.isNull():
-                self.cover_label.clear()
-                self.cover_label.setText("🎵")
-            else:
-                # Размер и сглаживание
-                size = self.cover_label.size()
-                pixmap = pixmap.scaled(
-                    size, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation
-                )
-
-                # Создаём новое изображение с прозрачным фоном
-                rounded = QPixmap(size)
-                rounded.fill(Qt.transparent)
-
-                painter = QPainter(rounded)
-                painter.setRenderHint(QPainter.Antialiasing)
-                path = QPainterPath()
-                radius = 12
-                path.addRoundedRect(0, 0, size.width(), size.height(), radius, radius)
-                painter.setClipPath(path)
-                painter.drawPixmap(0, 0, pixmap)
-                painter.end()
-                # self._connect_and_play_path(p)
-                self.cover_label.setPixmap(rounded)
-                self.cover_label.setText("")
-        else:
-            self.cover_label.clear()
-            self.cover_label.setText("🎵")
-
-    def _toggle_play(self):
-        st = self.player.state()
-        if st == QMediaPlayer.PlayingState:
-            self.player.pause()
-            self.play_btn.setText("▶")
-        elif st == QMediaPlayer.PausedState:
-            self.player.play()
-            self.play_btn.setText("⏸")
-        else:
-            if self.current_index == -1 and self.current_playlist:
-                self.play_song(0)
-
-    def _play_next(self):
-        """Наступний трек з підтримкою повтору"""
-        if not self.current_playlist:
-            return
-
-        # Якщо repeat_mode == "one", просто перезапускаємо поточний трек
-        if hasattr(self, "repeat_mode") and self.repeat_mode == "one":
-            self.player.setPosition(0)
-            if self.player.state() != QMediaPlayer.PlayingState:
-                self.player.play()
-            return
-
-        # Інакше йдемо до наступного треку
-        self.current_index = (self.current_index + 1) % len(self.current_playlist)
-        self.play_song(self.current_index)
-
-    def _play_prev(self):
-        pl = self.playback_playlist or self.current_playlist
-        if self.current_index > 0:
-            self.play_song(self.current_index - 1)
-        elif self.repeat_mode == 1 and len(pl) > 0:
-            self.play_song(len(pl) - 1)
-
-    def _toggle_repeat(self):
-        # cycle 0 -> 1 -> 2 -> 0
-        self.repeat_mode = (self.repeat_mode + 1) % 3
-        if self.repeat_mode == 0:
-            self.repeat_btn.setText("🔁")
-            self.repeat_btn.setStyleSheet(AnimatedButton("", "icon").styleSheet())
-        elif self.repeat_mode == 1:
-            self.repeat_btn.setText("🔁")
-            self.repeat_btn.setStyleSheet(
-                "background: #4a9eff; border-radius: 8px; color: white;"
-            )
-        else:
-            self.repeat_btn.setText("🔁1")
-            self.repeat_btn.setStyleSheet(
-                "background: #4a9eff; border-radius: 8px; color: white;"
-            )
-
-    def _update_rpc_time(self, song_title):
-        """Комбінує elapsed time (автоматичний) + progress bar (текстовий)"""
-        last_update_time = 0
-        update_interval = 10  # оновлення прогрес-бару кожні 10 сек
-
-        while self.rpc_running:
-            try:
-                current_time = time.time()
-
-                if current_time - last_update_time >= update_interval:
-                    pos = self.player.position() // 1000
-                    dur = self.player.duration() // 1000
-
-                    # Прогрес бар оновлюємо рідко
-                    progress = self._get_progress_bar(pos, dur)
-                    tot = (
-                        time.strftime("%M:%S", time.gmtime(dur)) if dur > 0 else "00:00"
-                    )
-
-                    # start - для автоматичного тикання elapsed time
-                    start_time = int(time.time()) - pos
-
-                    self.rpc.update(
-                        details=f"🎵 {song_title}",
-                        state=f"{progress} {tot}",  # прогрес + загальний час
-                        start=start_time,  # elapsed тікає автоматично внизу
-                        large_image="pyfy",
-                        large_text="PyFy Music Player",
-                    )
-
-                    last_update_time = current_time
-
-            except Exception as e:
-                logger.exception("[RPC Update Error] %s", e)
-
-            time.sleep(2)  # перевірка кожні 2 секунди
-
-    def _get_progress_bar(self, position, duration, length=12):
-        """Візуальний прогрес бар"""
-        if duration <= 0:
-            return "▱" * length
-
-        filled = int((position / duration) * length)
-        bar = "▰" * filled + "▱" * (length - filled)
-        return bar
 
     # ---------------------------
     # Media callbacks

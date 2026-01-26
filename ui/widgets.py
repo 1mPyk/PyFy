@@ -1,41 +1,19 @@
-from PyQt5.QtCore import (
-    Qt,
-    QUrl,
-    QTime,
-    QObject,
-    QEvent,
-    QSize,
-    QTimer,
-    QThread,
-    pyqtSignal,
-)
-from PyQt5.QtGui import QColor, QIcon, QPixmap, QPainterPath, QPainter
-from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
-    QApplication,
     QWidget,
     QPushButton,
     QLabel,
-    QVBoxLayout,
     QHBoxLayout,
-    QListWidget,
-    QFrame,
     QGraphicsDropShadowEffect,
-    QFileDialog,
-    QSlider,
-    QListWidgetItem,
     QInputDialog,
     QMenu,
-    QSizePolicy,
-    QLineEdit,
-    QCheckBox,
     QMessageBox,
-    QDialog,
-    QProgressBar,
 )
 import os
 from config.constants import COVERS_DIR
 from utils.logger import logger
+
 
 class AnimatedButton(QPushButton):
     def __init__(self, text="", style_type="primary"):
@@ -88,6 +66,7 @@ class AnimatedButton(QPushButton):
         shadow.setColor(QColor(0, 0, 0, 110))
         shadow.setOffset(0, 3)
         self.setGraphicsEffect(shadow)
+
 
 class SongItemWidget(QWidget):
     def _t(self, key: str) -> str:
@@ -235,3 +214,44 @@ class SongItemWidget(QWidget):
                 plist.remove(path)
         ui.save_playlists()
         ui._scan_songs_dir()
+
+
+appstyle = """
+        QWidget { font-family: 'Segoe UI', Arial, sans-serif; color: white; }
+        QLabel { color: white; }
+
+        QMenu {
+            background-color: #252426;
+            border: 1px solid #3a3a3b;
+            border-radius: 8px;
+            padding: 6px;
+        }
+        QMenu::item {
+            padding: 6px 20px;
+            color: white;
+            border-radius: 6px;
+        }
+        QMenu::item:selected { background: #3a3a3b; }
+
+        QDialog, QInputDialog, QMessageBox {
+            background-color: #252426;
+            border-radius: 12px;
+            border: none;
+        }
+
+        QLineEdit {
+            background-color: #1c1c1d;
+            color: white;
+            border: 1px solid #3a3a3b;
+            border-radius: 6px;
+            padding: 4px 8px;
+        }
+        QPushButton {
+            background: #3a3a3b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 14px;
+        }
+        QPushButton:hover { background: #4a9eff; }
+        """

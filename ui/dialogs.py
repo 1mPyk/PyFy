@@ -1,16 +1,4 @@
-from PyQt5.QtCore import (
-    Qt,
-    QUrl,
-    QTime,
-    QObject,
-    QEvent,
-    QSize,
-    QTimer,
-    QThread,
-    pyqtSignal,
-)
-from PyQt5.QtGui import QColor, QIcon, QPixmap, QPainterPath, QPainter
-from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QApplication,
     QWidget,
@@ -20,24 +8,13 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QListWidget,
     QFrame,
-    QGraphicsDropShadowEffect,
-    QFileDialog,
-    QSlider,
-    QListWidgetItem,
-    QInputDialog,
-    QMenu,
-    QSizePolicy,
     QLineEdit,
-    QCheckBox,
-    QMessageBox,
     QDialog,
-    QProgressBar,
+    QProgressBar
 )
-from core.downloader import audio_download
 from ui.widgets import AnimatedButton
 from ui.topbar import ModernTopBar
 class DownloadHistoryDialog(QDialog):
-    """Dialog that shows recent download history entries."""
 
     def __init__(self, parent=None, history=None):
         super().__init__(parent)
@@ -60,7 +37,6 @@ class DownloadHistoryDialog(QDialog):
             self.list_w.addItem(txt)
             
 class DownloadProgressDialog(QDialog):
-    """Simple dialog that shows download progress and allows cancelling."""
 
     def __init__(self, parent=None, title=None, label=None):
         super().__init__(parent)
@@ -99,62 +75,6 @@ class DownloadProgressDialog(QDialog):
         self.cancel_btn.setEnabled(False)
         self.label.setText("Cancelling...")
 
-class DownloadWorker(QThread):
-    """Worker thread to download audio using yt_dlp with progress reporting and cancellation."""
-
-    success = pyqtSignal(str, str, object, object)
-    error = pyqtSignal(str)
-    progress = pyqtSignal(int)
-    status = pyqtSignal(str)
-
-    def __init__(self, url):
-        super().__init__()
-        self.url = url
-        self._is_cancelled = False
-
-    def cancel(self):
-        """Signal to request cancellation from the GUI thread."""
-        self._is_cancelled = True
-        self.status.emit("cancel_requested")
-
-    def run(self):
-        try:
-
-            def progress_hook(d):
-                # d is a dict provided by yt_dlp; handle downloading and finished statuses
-                try:
-                    if d.get("status") == "downloading":
-                        downloaded = d.get("downloaded_bytes") or d.get(
-                            "downloaded_bytes", 0
-                        )
-                        total = (
-                            d.get("total_bytes") or d.get("total_bytes_estimate") or 0
-                        )
-                        if total and downloaded is not None:
-                            pct = int(downloaded * 100 / total) if total else 0
-                            self.progress.emit(max(0, min(100, pct)))
-                        self.status.emit("downloading")
-                    elif d.get("status") == "finished":
-                        self.progress.emit(100)
-                        self.status.emit("finished")
-                except Exception:
-                    pass
-                # cancellation check
-                if self._is_cancelled:
-                    raise Exception("Download cancelled")
-
-            file_path, title, timeline, cover = audio_download(
-                self.url,
-                progress_hook=progress_hook,
-                cancel_check=lambda: self._is_cancelled,
-            )
-            if self._is_cancelled:
-                # emit error to indicate cancellation
-                self.error.emit("Cancelled")
-                return
-            self.success.emit(file_path, title, timeline, cover)
-        except Exception as e:
-            self.error.emit(str(e))
             
 class CustomInputDialog(QWidget):
     def __init__(self, title="Input", label="Enter text:", parent=None):

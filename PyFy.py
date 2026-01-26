@@ -13,6 +13,8 @@ from config.constants import (
 )
 from utils.files import ensure_dir
 from ui.main_window import MusicPlayerUI
+from ui.widgets import appstyle
+
 ensure_dir(ICONS_DIR)
 ensure_dir(CONFIG_DIR)
 ensure_dir(SONGS_DIR)
@@ -24,47 +26,7 @@ if os.path.exists(downloadupdate_path):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    app.setStyleSheet(
-        """
-        QWidget { font-family: 'Segoe UI', Arial, sans-serif; color: white; }
-        QLabel { color: white; }
-
-        QMenu {
-            background-color: #252426;
-            border: 1px solid #3a3a3b;
-            border-radius: 8px;
-            padding: 6px;
-        }
-        QMenu::item {
-            padding: 6px 20px;
-            color: white;
-            border-radius: 6px;
-        }
-        QMenu::item:selected { background: #3a3a3b; }
-
-        QDialog, QInputDialog, QMessageBox {
-            background-color: #252426;
-            border-radius: 12px;
-            border: none;
-        }
-
-        QLineEdit {
-            background-color: #1c1c1d;
-            color: white;
-            border: 1px solid #3a3a3b;
-            border-radius: 6px;
-            padding: 4px 8px;
-        }
-        QPushButton {
-            background: #3a3a3b;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 6px 14px;
-        }
-        QPushButton:hover { background: #4a9eff; }
-    """
-    )
+    app.setStyleSheet(appstyle)
 
     w = MusicPlayerUI()
     w.show()
