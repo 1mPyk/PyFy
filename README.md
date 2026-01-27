@@ -22,7 +22,7 @@ No complicated setup — just download, install, and enjoy your music.
 
 1. Download the installer:
 
-   👉 [Download](https://github.com/1mPyk/PyFy/releases/tag/1.4.0)
+   👉 [Download](https://github.com/1mPyk/PyFy/releases)
 
 2. Run the installer.
 
