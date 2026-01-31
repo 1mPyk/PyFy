@@ -8,24 +8,28 @@ from urllib.parse import urlparse
 from win32com.client import Dispatch
 
 # Настройки
-CURRENT_VERSION = "1.4.0"
-CURRENT_UPDATER_VERSION = "1.4.0"
-VERSION_URL = "https://raw.githubusercontent.com/1mPyk/Testmain/refs/heads/main/versionPyFy.txt"
-VERSION_UPDATER_URL = "https://raw.githubusercontent.com/1mPyk/Testmain/refs/heads/main/pyfyupdate_ver.txt"
-UPDATE_URL_FILE_URL = "https://raw.githubusercontent.com/1mPyk/Testmain/refs/heads/main/UpdatePyFy.txt"
-LINE = -1
-LINE += 11
+CURRENT_VERSION = "1.4.1"
+CURRENT_UPDATER_VERSION = "1.4.1"
+VERSION_URL = (
+    "https://raw.githubusercontent.com/1mPyk/Testmain/refs/heads/main/versionPyFy.txt"
+)
+UPDATE_URL_FILE_URL = "https://raw.githubusercontent.com/1mPyk/Testmain/refs/heads/main/LatestUpdatePyFy.txt"
+LINE = 0
 
-startup_folder = os.path.join(os.environ['APPDATA'], r"Microsoft\Windows\Start Menu\Programs\Startup")
+startup_folder = os.path.join(
+    os.environ["APPDATA"], r"Microsoft\Windows\Start Menu\Programs\Startup"
+)
 shortcut_name = "Updater.lnk"
 shortcut_path = os.path.join(startup_folder, shortcut_name)
 
 if not os.path.exists(shortcut_path):
-    target = sys.executable if getattr(sys, 'frozen', False) else os.path.abspath(__file__)
+    target = (
+        sys.executable if getattr(sys, "frozen", False) else os.path.abspath(__file__)
+    )
     icon_path = "app.ico"
     if not os.path.exists(icon_path):
         icon_path = target
-    shell = Dispatch('WScript.Shell')
+    shell = Dispatch("WScript.Shell")
     shortcut = shell.CreateShortcut(shortcut_path)
     shortcut.TargetPath = target
     shortcut.WorkingDirectory = os.path.dirname(target)
@@ -33,16 +37,19 @@ if not os.path.exists(shortcut_path):
     shortcut.save()
 else:
     os.remove(shortcut_path)
-    target = sys.executable if getattr(sys, 'frozen', False) else os.path.abspath(__file__)
+    target = (
+        sys.executable if getattr(sys, "frozen", False) else os.path.abspath(__file__)
+    )
     icon_path = "app.ico"
     if not os.path.exists(icon_path):
         icon_path = target
-    shell = Dispatch('WScript.Shell')
+    shell = Dispatch("WScript.Shell")
     shortcut = shell.CreateShortcut(shortcut_path)
     shortcut.TargetPath = target
     shortcut.WorkingDirectory = os.path.dirname(target)
     shortcut.IconLocation = icon_path
     shortcut.save()
+
 
 def compare_versions(v1: str, v2: str) -> int:
     a = [int(x) for x in v1.split(".")]
@@ -51,22 +58,30 @@ def compare_versions(v1: str, v2: str) -> int:
     a += [0] * (length - len(a))
     b += [0] * (length - len(b))
     for x, y in zip(a, b):
-        if x < y: return -1
-        if x > y: return 1
+        if x < y:
+            return -1
+        if x > y:
+            return 1
     return 0
+
 
 def get_latest_version():
     try:
         with urllib.request.urlopen(VERSION_URL, timeout=6) as resp:
-            return resp.read().decode('utf-8').strip().splitlines()[0].strip()
+            return resp.read().decode("utf-8").strip().splitlines()[0].strip()
     except Exception as e:
         print(f"[Ошибка] Не удалось получить последнюю версию: {e}")
         return None
 
+
 def get_update_url(line_number=0):  # 0 — первая строка, 1 — вторая и т.д.
     try:
         with urllib.request.urlopen(UPDATE_URL_FILE_URL, timeout=6) as resp:
-            lines = [line.strip() for line in resp.read().decode('utf-8').splitlines() if line.strip()]
+            lines = [
+                line.strip()
+                for line in resp.read().decode("utf-8").splitlines()
+                if line.strip()
+            ]
             if 0 <= line_number < len(lines):
                 return lines[line_number]
             else:
@@ -75,6 +90,7 @@ def get_update_url(line_number=0):  # 0 — первая строка, 1 — в�
     except Exception as e:
         print(f"[Ошибка] Не удалось получить ссылку на обновление: {e}")
         return None
+
 
 def download_file(url):
     from urllib.parse import urlparse
@@ -98,7 +114,7 @@ def download_file(url):
         headers = {"User-Agent": "Mozilla/5.0"}  # Dropbox иногда требует
         with requests.get(url, headers=headers, stream=True) as r:
             r.raise_for_status()
-            with open(filename, 'wb') as f:
+            with open(filename, "wb") as f:
                 for chunk in r.iter_content(chunk_size=8192):
                     if chunk:
                         f.write(chunk)
@@ -108,13 +124,16 @@ def download_file(url):
         print(f"[Ошибка] Не удалось скачать файл: {e}")
         return None
 
+
 def get_current_path():
-    if getattr(sys, 'frozen', False):  # если запущено как .exe (PyInstaller и т.п.)
+    if getattr(sys, "frozen", False):  # если запущено как .exe (PyInstaller и т.п.)
         return os.path.dirname(sys.executable)
     else:  # если обычный .py
         return os.path.dirname(os.path.abspath(__file__))
 
+
 current_path = get_current_path()
+
 
 def create_and_run_updater(zip_name="Update.zip"):
     bat_name = "update.bat"
@@ -131,12 +150,10 @@ del "%~f0"
         f.write(bat_content)
 
     # Запуск батника без консоли
-    subprocess.Popen(
-        ["cmd", "/c", bat_name],
-        creationflags=subprocess.CREATE_NO_WINDOW
-    )
+    subprocess.Popen(["cmd", "/c", bat_name], creationflags=subprocess.CREATE_NO_WINDOW)
     print("[OK] Запущен установщик. Программа завершается...")
     sys.exit(0)
+
 
 def main():
     print(f"Текущая версия: {CURRENT_VERSION}")
@@ -157,9 +174,12 @@ def main():
             print("Ссылка на обновление недоступна.")
     elif cmp == 0:
         print("Установлена последняя версия.")
-        current_folder = os.path.dirname(os.path.abspath(__name__)); to_file = os.path.join(current_folder, "PyFy"); os.startfile(os.path.join(to_file, "PyFy.exe"))
+        current_folder = os.path.dirname(os.path.abspath(__name__))
+        to_file = os.path.join(current_folder, "PyFy")
+        os.startfile(os.path.join(to_file, "PyFy.exe"))
     else:
         print("Локальная версия новее, чем на сервере.")
+
 
 if __name__ == "__main__":
     main()
